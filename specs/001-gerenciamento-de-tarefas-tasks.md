@@ -45,7 +45,7 @@ Quebra de [spec 001](001-gerenciamento-de-tarefas-spec.md) e [plano 001](001-ger
    - `runCli(argv, service)` devolve o código de saída sem encerrar o processo. `create --title` e `list` / `list --status` escrevem o JSON de sucesso em stdout e terminam com `0`. Título ou filtro inválido escreve `{ "error": "validation_error", "message" }` em stderr e termina com `1`, sem alterar o store no caso do título. O processo só chama `runCli(process.argv)` e `process.exit` quando `src/cli.ts` é o entrypoint.
    - Pronto: o teste da CLI, sem spawn, passa para criar, título inválido, listar sem filtro, `all`, `open`, `done` e filtro inválido.
 
-8. -[ ] CLI: concluir, remover e uso
+8. -[ x ] CLI: concluir, remover e uso
    - Depende de: 7.
    - Arquivos: `src/cli.ts`, `src/cli.test.ts`.
    - `complete --id` e `remove --id`. Sucesso em stdout com exit `0`; remoção imprime `{ "id", "removed": true }`. Id vazio, id inexistente e tarefa já `done` escrevem o código `validation_error`, `task_not_found` ou `task_already_done` em stderr e terminam com `1`. Comando desconhecido, ou comando sem a flag obrigatória, termina com `2` e `usage_error`.

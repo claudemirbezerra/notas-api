@@ -2,7 +2,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { AppError, toErrorBody } from "./domain/errors.js";
-import { createTaskSchema, taskFilterSchema } from "./domain/task.js";
+import { createTaskSchema, taskFilterSchema, taskIdSchema } from "./domain/task.js";
 import { TaskService } from "./service/task-service.js";
 import { MemoryTaskStore } from "./store/memory-task-store.js";
 
@@ -44,8 +44,10 @@ export function runCli(
   }
 }
 
+const commands = new Set(["create", "list", "complete", "remove"]);
+
 function commandArgv(argv: readonly string[]): string[] {
-  const start = argv.findIndex((arg) => arg === "create" || arg === "list");
+  const start = argv.findIndex((arg) => commands.has(arg));
   return start === -1 ? [...argv] : argv.slice(start);
 }
 
@@ -57,6 +59,12 @@ function dispatch(args: string[], service: TaskService): unknown {
   if (command === "list") {
     return list(rest, service);
   }
+  if (command === "complete") {
+    return complete(rest, service);
+  }
+  if (command === "remove") {
+    return remove(rest, service);
+  }
   throw new UsageError("Comando desconhecido");
 }
 
@@ -64,6 +72,17 @@ function create(args: string[], service: TaskService): unknown {
   const title = requiredFlag(args, "--title");
   const parsed = createTaskSchema.parse({ title });
   return service.createTask(parsed.title);
+}
+
+function complete(args: string[], service: TaskService): unknown {
+  const id = taskIdSchema.parse(requiredFlag(args, "--id"));
+  return service.completeTask(id);
+}
+
+function remove(args: string[], service: TaskService): unknown {
+  const id = taskIdSchema.parse(requiredFlag(args, "--id"));
+  service.removeTask(id);
+  return { id, removed: true };
 }
 
 function list(args: string[], service: TaskService): unknown {
