@@ -51,7 +51,7 @@ Quebra de [spec 001](001-gerenciamento-de-tarefas-spec.md) e [plano 001](001-ger
    - `complete --id` e `remove --id`. Sucesso em stdout com exit `0`; remoção imprime `{ "id", "removed": true }`. Id vazio, id inexistente e tarefa já `done` escrevem o código `validation_error`, `task_not_found` ou `task_already_done` em stderr e terminam com `1`. Comando desconhecido, ou comando sem a flag obrigatória, termina com `2` e `usage_error`.
    - Pronto: o teste da CLI passa para concluir, concluir tarefa já `done`, concluir id inexistente, remover, remover id inexistente, id vazio, comando desconhecido e flag obrigatória ausente.
 
-9. -[ ] Composição das duas bordas
+9. -[ x ] Composição das duas bordas
    - Depende de: 5, 8.
    - Arquivo: `src/composition.test.ts`.
    - Um único service vai para `createHttpServer` e para `runCli`.
