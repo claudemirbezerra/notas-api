@@ -6,6 +6,7 @@ import { describe, it } from "node:test";
 
 import { runCli, runPersistentCli, type CliIo } from "./cli.js";
 import { TaskService } from "./service/task-service.js";
+import type { TaskFileSystem } from "./store/file-task-store.js";
 import { MemoryTaskStore } from "./store/memory-task-store.js";
 
 function run(argv: string[], tasks = new TaskService(new MemoryTaskStore())) {
@@ -43,7 +44,7 @@ function memoryFile(t: TestContext, contents?: Buffer | string): string {
   return file;
 }
 
-function runPersistent(argv: string[], filePath: string) {
+function runPersistent(argv: string[], filePath: string, files?: TaskFileSystem) {
   let stdout = "";
   let stderr = "";
   const io: CliIo = {
@@ -58,7 +59,7 @@ function runPersistent(argv: string[], filePath: string) {
       },
     },
   };
-  const code = runPersistentCli(argv, filePath, io);
+  const code = runPersistentCli(argv, filePath, io, files);
   return { code, stdout, stderr };
 }
 
@@ -374,6 +375,132 @@ describe("CLI memória entre invocações", () => {
     });
     assert.deepEqual(JSON.parse(runPersistent(["list"], second).stdout), {
       tasks: [{ id: "1", title: "somente b", status: "open" }],
+    });
+  });
+});
+
+describe("CLI arquivo inválido e falha sem gravar", () => {
+  it("conteúdo inválido falha no comando conhecido e no desconhecido sem alterar os bytes", (t) => {
+    const contents = Buffer.from("{");
+    const file = memoryFile(t, contents);
+
+    const listed = runPersistent(["list"], file);
+    assert.equal(listed.code, 1);
+    assert.equal(listed.stdout, "");
+    assert.equal(JSON.parse(listed.stderr).error, "invalid_task_memory");
+    assert.deepEqual(readFileSync(file), contents);
+
+    const unknown = runPersistent(["explodir"], file);
+    assert.equal(unknown.code, 1);
+    assert.equal(unknown.stdout, "");
+    assert.equal(JSON.parse(unknown.stderr).error, "invalid_task_memory");
+    assert.deepEqual(readFileSync(file), contents);
+  });
+
+  it("uso incorreto sem arquivo ou com arquivo em branco não cria nem reescreve", (t) => {
+    const absent = memoryFile(t);
+    const unknown = runPersistent(["explodir"], absent);
+    const missingFlag = runPersistent(["create"], absent);
+
+    assert.equal(unknown.code, 2);
+    assert.equal(JSON.parse(unknown.stderr).error, "usage_error");
+    assert.equal(missingFlag.code, 2);
+    assert.equal(JSON.parse(missingFlag.stderr).error, "usage_error");
+    assert.equal(existsSync(absent), false);
+
+    const blank = Buffer.from(" \n\t ");
+    const blankFile = memoryFile(t, blank);
+    const blankUsage = runPersistent(["remove"], blankFile);
+    assert.equal(blankUsage.code, 2);
+    assert.equal(JSON.parse(blankUsage.stderr).error, "usage_error");
+    assert.deepEqual(readFileSync(blankFile), blank);
+  });
+
+  it("uso incorreto com arquivo válido não muda os bytes", (t) => {
+    const contents = Buffer.from('[{"id":"1","title":"fica","status":"open"}]');
+    const file = memoryFile(t, contents);
+
+    const unknown = runPersistent(["explodir"], file);
+    const missingFlag = runPersistent(["complete"], file);
+
+    assert.equal(unknown.code, 2);
+    assert.equal(JSON.parse(unknown.stderr).error, "usage_error");
+    assert.equal(missingFlag.code, 2);
+    assert.equal(JSON.parse(missingFlag.stderr).error, "usage_error");
+    assert.equal(unknown.stdout, "");
+    assert.equal(missingFlag.stdout, "");
+    assert.deepEqual(readFileSync(file), contents);
+  });
+
+  it("rejeições da spec 001 não mudam os bytes", (t) => {
+    const contents = Buffer.from('[{"id":"1","title":"feita","status":"done"}]\n');
+    const file = memoryFile(t, contents);
+
+    const title = runPersistent(["create", "--title", "   "], file);
+    const filter = runPersistent(["list", "--status", "later"], file);
+    const missing = runPersistent(["complete", "--id", "9"], file);
+    const alreadyDone = runPersistent(["complete", "--id", "1"], file);
+
+    assert.equal(title.code, 1);
+    assert.equal(JSON.parse(title.stderr).error, "validation_error");
+    assert.equal(filter.code, 1);
+    assert.equal(JSON.parse(filter.stderr).error, "validation_error");
+    assert.equal(missing.code, 1);
+    assert.equal(JSON.parse(missing.stderr).error, "task_not_found");
+    assert.equal(alreadyDone.code, 1);
+    assert.equal(JSON.parse(alreadyDone.stderr).error, "task_already_done");
+    assert.equal(title.stdout, "");
+    assert.equal(filter.stdout, "");
+    assert.equal(missing.stdout, "");
+    assert.equal(alreadyDone.stdout, "");
+    assert.deepEqual(readFileSync(file), contents);
+  });
+
+  it("falha de gravação injetada não deixa a tarefa no arquivo", (t) => {
+    const files: TaskFileSystem = {
+      read() {
+        return null;
+      },
+      writeFile() {
+        throw new Error("full");
+      },
+      rename() {
+        throw new Error("não deve renomear");
+      },
+      remove() {
+        throw Object.assign(new Error("missing"), { code: "ENOENT" });
+      },
+    };
+    const absent = memoryFile(t);
+    const created = runPersistent(["create", "--title", "nova"], absent, files);
+
+    assert.equal(created.code, 1);
+    assert.equal(created.stdout, "");
+    assert.equal(JSON.parse(created.stderr).error, "task_memory_io");
+    assert.equal(existsSync(absent), false);
+
+    const contents = Buffer.from('[{"id":"1","title":"antiga","status":"open"}]\n');
+    const existing = memoryFile(t, contents);
+    const failed = runPersistent(["create", "--title", "outra"], existing, {
+      read() {
+        return Buffer.from(contents);
+      },
+      writeFile() {
+        throw new Error("full");
+      },
+      rename() {
+        throw new Error("não deve renomear");
+      },
+      remove() {
+        throw Object.assign(new Error("missing"), { code: "ENOENT" });
+      },
+    });
+
+    assert.equal(failed.code, 1);
+    assert.equal(JSON.parse(failed.stderr).error, "task_memory_io");
+    assert.deepEqual(readFileSync(existing), contents);
+    assert.deepEqual(JSON.parse(runPersistent(["list"], existing).stdout), {
+      tasks: [{ id: "1", title: "antiga", status: "open" }],
     });
   });
 });

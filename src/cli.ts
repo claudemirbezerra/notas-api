@@ -4,7 +4,7 @@ import { pathToFileURL } from "node:url";
 import { AppError, toErrorBody } from "./domain/errors.js";
 import { createTaskSchema, taskFilterSchema, taskIdSchema } from "./domain/task.js";
 import { TaskService } from "./service/task-service.js";
-import { FileTaskStore } from "./store/file-task-store.js";
+import { FileTaskStore, type TaskFileSystem } from "./store/file-task-store.js";
 import { MemoryTaskStore } from "./store/memory-task-store.js";
 
 export type CliWriter = {
@@ -33,8 +33,16 @@ export function runPersistentCli(
   argv: readonly string[],
   filePath: string,
   io: CliIo = { stdout: process.stdout, stderr: process.stderr },
+  files?: TaskFileSystem,
 ): number {
-  const store = FileTaskStore.open(filePath);
+  let store: FileTaskStore;
+  try {
+    store = FileTaskStore.open(filePath, files);
+  } catch (error) {
+    const body = toErrorBody(error);
+    io.stderr.write(`${JSON.stringify(body)}\n`);
+    return exitByCode[body.error] ?? 1;
+  }
   return runCli(argv, new TaskService(store), io);
 }
 
