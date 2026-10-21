@@ -9,7 +9,7 @@ Quebra de [spec 001](001-gerenciamento-de-tarefas-spec.md) e [plano 001](001-ger
    - O domínio não importa store, http, cli nem faz IO, e não executa `parse` fora dos testes do schema.
    - Pronto: o teste de domínio passa para título com espaços nas pontas, título ausente, vazio ou só com espaços, filtro inválido, filtro vazio e id vazio.
 
-2. -[ ] Store em memória
+2. -[ x ] Store em memória
    - Depende de: 1.
    - Arquivos: `src/store/task-store.ts`, `src/store/memory-task-store.ts`, `src/store/memory-task-store.test.ts`.
    - Interface `TaskStore` com `allocateId`, `insert`, `list`, `findById`, `update` e `delete`. `MemoryTaskStore` guarda um array na ordem de inserção e um contador que só sobe, começando em `"1"`.
