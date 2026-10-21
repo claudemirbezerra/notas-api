@@ -1,0 +1,38 @@
+---
+description: Memória do projeto notas-api — stack, comandos, estrutura e fluxo
+alwaysApply: true
+---
+
+# notas-api
+
+## Stack
+- Node 22 LTS, TypeScript ESM strict
+- Zod na fronteira (HTTP/CLI)
+- Testes: `node:test` via tsx
+- HTTP: `node:http` (sem framework)
+
+## Comandos
+- `npm run dev` — API em localhost:3000 (`tsx src/index.ts`)
+- `npm run cli` — CLI (`tsx src/cli.ts`)
+- `npm test` — `node --import tsx --test "src/**/*.test.ts"`
+- `npm run typecheck` — `tsc --noEmit`
+
+## Estrutura
+- `src/domain` — tipos + Zod, sem IO
+- `src/store` — persistência in-memory atrás de interface
+- `src/service` — regras de negócio
+- `src/http` — borda HTTP
+- `src/cli.ts` — borda CLI
+- `specs/` — artefatos spec-driven
+
+## Convenções
+- Camadas não pulam: http/cli → service → store
+- Entrada externa validada com Zod
+- Erros de domínio: classes, traduzidas na borda
+- Lógica nova nasce com teste
+- `typecheck` e `test` sempre verdes
+- Nunca commitiar secrets; nunca ler `.env`
+
+## Fluxo de trabalho
+`/especificar` → `/planejar` → `/tarefas` → `/implementar`  
+Revisão humana entre fases. Artefatos em `specs/`.

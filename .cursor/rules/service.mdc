@@ -1,0 +1,10 @@
+---
+description: Regras da camada service
+globs: src/service/**
+alwaysApply: false
+---
+
+# Service
+
+- Funções puras onde possível
+- Nunca importar de `src/http`
