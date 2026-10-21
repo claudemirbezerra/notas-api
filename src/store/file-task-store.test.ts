@@ -1,11 +1,21 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, it } from "node:test";
 
 import { InvalidTaskMemoryError, TaskMemoryIoError } from "../domain/errors.js";
-import { FileTaskStore, type TaskFileReader } from "./file-task-store.js";
+import { FileTaskStore, type TaskFileSystem } from "./file-task-store.js";
 
 type TestContext = {
   after(fn: () => void): void;
@@ -108,9 +118,18 @@ describe("FileTaskStore abrir", () => {
   it("traduz falha de leitura do dublê para erro de IO", (t) => {
     const file = fileIn(t, "[]");
     const before = readFileSync(file);
-    const files: TaskFileReader = {
+    const files: TaskFileSystem = {
       read() {
         throw Object.assign(new Error("denied"), { code: "EACCES" });
+      },
+      writeFile() {
+        throw new Error("não deve gravar");
+      },
+      rename() {
+        throw new Error("não deve renomear");
+      },
+      remove() {
+        throw new Error("não deve remover");
       },
     };
 
@@ -140,20 +159,139 @@ describe("FileTaskStore abrir", () => {
     assert.equal(store.allocateId(), "3");
     assert.equal(store.allocateId(), "4");
   });
+});
 
-  it("mutações ainda não gravam o arquivo", (t) => {
-    const contents = Buffer.from('[{"id":"1","title":"antiga","status":"open"}]');
+describe("FileTaskStore gravar", () => {
+  it("cria o arquivo no insert e a abertura seguinte vê a tarefa", (t) => {
+    const dir = workspace(t);
+    const file = path.join(dir, "tasks.json");
+    const store = FileTaskStore.open(file);
+    store.insert({ id: store.allocateId(), title: "comprar leite", status: "open" });
+
+    assert.deepEqual(
+      readFileSync(file),
+      Buffer.from('[{"id":"1","title":"comprar leite","status":"open"}]\n'),
+    );
+    assert.deepEqual(readdirSync(dir), ["tasks.json"]);
+    assert.deepEqual(FileTaskStore.open(file).list(), [
+      { id: "1", title: "comprar leite", status: "open" },
+    ]);
+  });
+
+  it("atualiza na mesma posição e remove o item gravando o conjunto", (t) => {
+    const file = fileIn(
+      t,
+      '[{"id":"1","title":"mais antiga","status":"open"},{"id":"2","title":"do meio","status":"open"},{"id":"3","title":"mais nova","status":"done"}]\n',
+    );
+    const store = FileTaskStore.open(file);
+    store.update({ id: "2", title: "do meio", status: "done" });
+    store.delete("1");
+
+    const expected = [
+      { id: "2", title: "do meio", status: "done" },
+      { id: "3", title: "mais nova", status: "done" },
+    ];
+    assert.deepEqual(store.list(), expected);
+    assert.deepEqual(
+      readFileSync(file),
+      Buffer.from(`${JSON.stringify(expected)}\n`),
+    );
+    assert.deepEqual(FileTaskStore.open(file).list(), expected);
+  });
+
+  it("remover a última tarefa grava uma lista vazia e não apaga o arquivo", (t) => {
+    const file = fileIn(t, '[{"id":"1","title":"única","status":"open"}]\n');
+    const store = FileTaskStore.open(file);
+    store.delete("1");
+
+    assert.deepEqual(store.list(), []);
+    assert.equal(existsSync(file), true);
+    assert.deepEqual(readFileSync(file), Buffer.from("[]\n"));
+  });
+
+  it("não grava update nem delete de id ausente", (t) => {
+    const contents = Buffer.from('[{ "id" : "1", "title" : "antiga", "status" : "open" }]');
     const file = fileIn(t, contents);
     const store = FileTaskStore.open(file);
 
-    store.update({ id: "1", title: "antiga", status: "done" });
-    store.delete("ausente");
-    store.insert({ id: "4", title: "nova", status: "open" });
+    store.update({ id: "9", title: "outra", status: "done" });
+    store.delete("9");
 
     assert.deepEqual(readFileSync(file), contents);
-    assert.deepEqual(store.list(), [
-      { id: "1", title: "antiga", status: "done" },
-      { id: "4", title: "nova", status: "open" },
-    ]);
+    assert.deepEqual(store.list(), [{ id: "1", title: "antiga", status: "open" }]);
+  });
+
+  it("falha de gravação não muda a lista, o destino nem deixa temporário", (t) => {
+    const dir = workspace(t);
+    const file = path.join(dir, "tasks.json");
+    const contents = Buffer.from('[{"id":"1","title":"antiga","status":"open"}]');
+    writeFileSync(file, contents);
+    const files: TaskFileSystem = {
+      read(filePath) {
+        return readFileSync(filePath);
+      },
+      writeFile(filePath, data) {
+        writeFileSync(filePath, data);
+      },
+      rename() {
+        throw new Error("rename failed");
+      },
+      remove(filePath) {
+        unlinkSync(filePath);
+      },
+    };
+    const store = FileTaskStore.open(file, files);
+    const before = store.list();
+
+    assert.throws(
+      () => store.update({ id: "1", title: "antiga", status: "done" }),
+      (error: unknown) => {
+        assert.ok(error instanceof TaskMemoryIoError);
+        assert.equal(error.message, "Não foi possível gravar tasks.json");
+        return true;
+      },
+    );
+    assert.deepEqual(store.list(), before);
+    assert.deepEqual(readFileSync(file), contents);
+    assert.deepEqual(
+      readdirSync(dir).filter((name) => name.endsWith(".tmp")),
+      [],
+    );
+  });
+
+  it("falha antes de criar o arquivo deixa o destino ausente", (t) => {
+    const dir = workspace(t);
+    const file = path.join(dir, "tasks.json");
+    const files: TaskFileSystem = {
+      read() {
+        return null;
+      },
+      writeFile() {
+        throw new Error("full");
+      },
+      rename() {
+        throw new Error("não deve renomear");
+      },
+      remove() {
+        throw Object.assign(new Error("missing"), { code: "ENOENT" });
+      },
+    };
+    const store = FileTaskStore.open(file, files);
+
+    assert.throws(() => store.insert({ id: "1", title: "nova", status: "open" }), TaskMemoryIoError);
+    assert.deepEqual(store.list(), []);
+    assert.equal(existsSync(file), false);
+    assert.deepEqual(readdirSync(dir), []);
+  });
+
+  it("reaproveita o id removido só numa abertura nova", (t) => {
+    const file = fileIn(t);
+    const store = FileTaskStore.open(file);
+    store.insert({ id: store.allocateId(), title: "primeira", status: "open" });
+    store.insert({ id: store.allocateId(), title: "segunda", status: "open" });
+    store.delete("2");
+
+    assert.equal(store.allocateId(), "3");
+    assert.equal(FileTaskStore.open(file).allocateId(), "2");
   });
 });
