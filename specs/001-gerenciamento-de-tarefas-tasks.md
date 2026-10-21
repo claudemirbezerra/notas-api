@@ -33,7 +33,7 @@ Quebra de [spec 001](001-gerenciamento-de-tarefas-spec.md) e [plano 001](001-ger
    - `POST /tasks/:id/complete` e `DELETE /tasks/:id`. Id vazio é `400` `validation_error`. `TaskNotFoundError` vira `404` `task_not_found`. `TaskAlreadyDoneError` vira `409` `task_already_done`. Remoção aceita responde `204` sem corpo. JSON inválido em `POST /tasks` responde `400` `validation_error` sem alterar o store. Rota ou método desconhecido responde `404` `route_not_found`. A mutação do service só ocorre depois do parse completo do corpo.
    - Pronto: o teste HTTP passa para concluir `open`, concluir `done`, concluir id inexistente, remover, remover id inexistente, id vazio, JSON inválido e rota desconhecida.
 
-6. -[ ] Entrypoint HTTP
+6. -[ x ] Entrypoint HTTP
    - Depende de: 5.
    - Arquivo: `src/index.ts`.
    - Compõe `MemoryTaskStore`, o service e `createHttpServer`, e escuta em `127.0.0.1:3000`. Sem regra de negócio e sem Zod neste arquivo.
