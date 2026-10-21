@@ -1,5 +1,25 @@
+import { ZodError } from "zod";
+
+export type ErrorBody = {
+  error: string;
+  message: string;
+};
+
 export abstract class AppError extends Error {
   abstract readonly code: string;
+}
+
+export function toErrorBody(error: unknown): ErrorBody {
+  if (error instanceof ZodError) {
+    return {
+      error: "validation_error",
+      message: error.issues[0]?.message ?? "Entrada inválida",
+    };
+  }
+  if (error instanceof AppError) {
+    return { error: error.code, message: error.message };
+  }
+  return { error: "internal_error", message: "Erro interno" };
 }
 
 export class TaskNotFoundError extends AppError {

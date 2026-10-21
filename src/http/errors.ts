@@ -1,17 +1,10 @@
-import { ZodError } from "zod";
-
-import { AppError } from "../domain/errors.js";
+import { AppError, toErrorBody, type ErrorBody } from "../domain/errors.js";
 
 const statusByCode: Record<string, number> = {
   validation_error: 400,
   task_not_found: 404,
   task_already_done: 409,
   route_not_found: 404,
-};
-
-export type HttpErrorBody = {
-  error: string;
-  message: string;
 };
 
 export class InvalidRequestError extends AppError {
@@ -40,18 +33,10 @@ export function parseJsonBody(raw: string): unknown {
   }
 }
 
-export function toHttpError(error: unknown): { status: number; body: HttpErrorBody } {
-  if (error instanceof ZodError) {
-    return toHttpError(new InvalidRequestError(error.issues[0]?.message ?? "Entrada inválida"));
-  }
-  if (error instanceof AppError) {
-    return {
-      status: statusByCode[error.code] ?? 500,
-      body: { error: error.code, message: error.message },
-    };
-  }
+export function toHttpError(error: unknown): { status: number; body: ErrorBody } {
+  const body = toErrorBody(error);
   return {
-    status: 500,
-    body: { error: "internal_error", message: "Erro interno" },
+    status: statusByCode[body.error] ?? 500,
+    body,
   };
 }

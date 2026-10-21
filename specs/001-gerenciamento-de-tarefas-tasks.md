@@ -39,7 +39,7 @@ Quebra de [spec 001](001-gerenciamento-de-tarefas-spec.md) e [plano 001](001-ger
    - Compõe `MemoryTaskStore`, o service e `createHttpServer`, e escuta em `127.0.0.1:3000`. Sem regra de negócio e sem Zod neste arquivo.
    - Pronto: `npm run typecheck` passa e a suíte já existente continua verde.
 
-7. -[ ] CLI: criar e listar
+7. -[ x ] CLI: criar e listar
    - Depende de: 3.
    - Arquivos: `src/cli.ts`, `src/cli.test.ts`.
    - `runCli(argv, service)` devolve o código de saída sem encerrar o processo. `create --title` e `list` / `list --status` escrevem o JSON de sucesso em stdout e terminam com `0`. Título ou filtro inválido escreve `{ "error": "validation_error", "message" }` em stderr e termina com `1`, sem alterar o store no caso do título. O processo só chama `runCli(process.argv)` e `process.exit` quando `src/cli.ts` é o entrypoint.
