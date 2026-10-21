@@ -1,8 +1,8 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 
-import { createTaskSchema, taskFilterSchema } from "../domain/task.js";
+import { createTaskSchema, taskFilterSchema, taskIdSchema } from "../domain/task.js";
 import type { TaskService } from "../service/task-service.js";
-import { RouteNotFoundError, parseJsonBody, toHttpError } from "./errors.js";
+import { InvalidRequestError, RouteNotFoundError, parseJsonBody, toHttpError } from "./errors.js";
 
 export function createHttpServer(service: TaskService): Server {
   return createServer((request, response) => {
@@ -32,6 +32,22 @@ async function handle(
     return;
   }
 
+  const parts = url.pathname.split("/");
+  if (
+    request.method === "POST" &&
+    parts.length === 4 &&
+    parts[1] === "tasks" &&
+    parts[3] === "complete"
+  ) {
+    await handleComplete(request, response, service, parts[2] ?? "");
+    return;
+  }
+
+  if (request.method === "DELETE" && parts.length === 3 && parts[1] === "tasks") {
+    await handleRemove(request, response, service, parts[2] ?? "");
+    return;
+  }
+
   throw new RouteNotFoundError();
 }
 
@@ -43,6 +59,41 @@ async function handleCreate(
   const body = parseJsonBody(await readBody(request));
   const parsed = createTaskSchema.parse(body);
   sendJson(response, 201, service.createTask(parsed.title));
+}
+
+async function handleComplete(
+  request: IncomingMessage,
+  response: ServerResponse,
+  service: TaskService,
+  rawId: string,
+): Promise<void> {
+  await readBody(request);
+  const id = readTaskId(rawId);
+  sendJson(response, 200, service.completeTask(id));
+}
+
+async function handleRemove(
+  request: IncomingMessage,
+  response: ServerResponse,
+  service: TaskService,
+  rawId: string,
+): Promise<void> {
+  await readBody(request);
+  const id = readTaskId(rawId);
+  service.removeTask(id);
+  response.writeHead(204);
+  response.end();
+}
+
+function readTaskId(rawId: string): string {
+  try {
+    return taskIdSchema.parse(decodeURIComponent(rawId));
+  } catch (error) {
+    if (error instanceof URIError) {
+      throw new InvalidRequestError("Id inválido");
+    }
+    throw error;
+  }
 }
 
 function handleList(url: URL, response: ServerResponse, service: TaskService): void {

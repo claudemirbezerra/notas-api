@@ -44,7 +44,8 @@ async function closeServer(server: Server): Promise<void> {
 
 async function request(base: string, path: string, init?: RequestInit): Promise<JsonResponse> {
   const response = await fetch(`${base}${path}`, init);
-  return { status: response.status, body: await response.json() };
+  const text = await response.text();
+  return { status: response.status, body: text.length === 0 ? undefined : JSON.parse(text) };
 }
 
 function postTask(base: string, body: unknown): Promise<JsonResponse> {
@@ -80,8 +81,8 @@ describe("HTTP criar e listar", () => {
 
       const invalid = await postTask(base, { title: "   " });
       assert.equal(invalid.status, 400);
-      assert.equal(invalidBody(invalid.body).error, "validation_error");
-      assert.ok(invalidBody(invalid.body).message.length > 0);
+      assert.equal(errorBody(invalid.body).error, "validation_error");
+      assert.ok(errorBody(invalid.body).message.length > 0);
       assert.deepEqual(tasks.listTasks("all"), before);
 
       const listed = await request(base, "/tasks");
@@ -126,7 +127,7 @@ describe("HTTP criar e listar", () => {
 
       const invalid = await request(base, "/tasks?status=later");
       assert.equal(invalid.status, 400);
-      assert.equal(invalidBody(invalid.body).error, "validation_error");
+      assert.equal(errorBody(invalid.body).error, "validation_error");
       assert.deepEqual(tasks.listTasks("all"), before);
 
       const listed = await request(base, "/tasks");
@@ -135,7 +136,136 @@ describe("HTTP criar e listar", () => {
   });
 });
 
-function invalidBody(body: unknown): { error: string; message: string } {
+describe("HTTP concluir, remover e rota desconhecida", () => {
+  it("conclui uma tarefa open", async () => {
+    await withServer(async (base) => {
+      const created = await postTask(base, { title: "comprar leite" });
+
+      const completed = await request(base, "/tasks/1/complete", { method: "POST" });
+      assert.equal(completed.status, 200);
+      assert.deepEqual(completed.body, {
+        id: "1",
+        title: "comprar leite",
+        status: "done",
+      });
+
+      const listed = await request(base, "/tasks?status=done");
+      assert.deepEqual(listed.body, { tasks: [completed.body] });
+      assert.deepEqual(created.body, {
+        id: "1",
+        title: "comprar leite",
+        status: "open",
+      });
+    });
+  });
+
+  it("recusa concluir uma tarefa done sem alterar a lista", async () => {
+    await withServer(async (base, tasks) => {
+      await postTask(base, { title: "pronta" });
+      await request(base, "/tasks/1/complete", { method: "POST" });
+      const before = tasks.listTasks("all");
+
+      const again = await request(base, "/tasks/1/complete", { method: "POST" });
+      assert.equal(again.status, 409);
+      assert.deepEqual(again.body, {
+        error: "task_already_done",
+        message: "Tarefa já concluída: 1",
+      });
+      assert.deepEqual(tasks.listTasks("all"), before);
+    });
+  });
+
+  it("recusa concluir um id inexistente", async () => {
+    await withServer(async (base, tasks) => {
+      const missing = await request(base, "/tasks/99/complete", { method: "POST" });
+      assert.equal(missing.status, 404);
+      assert.deepEqual(missing.body, {
+        error: "task_not_found",
+        message: "Tarefa não encontrada: 99",
+      });
+      assert.deepEqual(tasks.listTasks("all"), []);
+    });
+  });
+
+  it("remove uma tarefa com 204 e sem corpo", async () => {
+    await withServer(async (base) => {
+      await postTask(base, { title: "descartar" });
+
+      const removed = await request(base, "/tasks/1", { method: "DELETE" });
+      assert.equal(removed.status, 204);
+      assert.equal(removed.body, undefined);
+
+      const listed = await request(base, "/tasks");
+      assert.deepEqual(listed.body, { tasks: [] });
+    });
+  });
+
+  it("recusa remover um id inexistente", async () => {
+    await withServer(async (base, tasks) => {
+      await postTask(base, { title: "fica" });
+      const before = tasks.listTasks("all");
+
+      const missing = await request(base, "/tasks/99", { method: "DELETE" });
+      assert.equal(missing.status, 404);
+      assert.equal(errorBody(missing.body).error, "task_not_found");
+      assert.deepEqual(tasks.listTasks("all"), before);
+    });
+  });
+
+  it("rejeita id vazio ao concluir e ao remover", async () => {
+    await withServer(async (base, tasks) => {
+      await postTask(base, { title: "fica" });
+      const before = tasks.listTasks("all");
+      const blank = encodeURIComponent("   ");
+
+      const complete = await request(base, `/tasks/${blank}/complete`, { method: "POST" });
+      const remove = await request(base, `/tasks/${blank}`, { method: "DELETE" });
+
+      assert.equal(complete.status, 400);
+      assert.equal(errorBody(complete.body).error, "validation_error");
+      assert.equal(remove.status, 400);
+      assert.equal(errorBody(remove.body).error, "validation_error");
+      assert.deepEqual(tasks.listTasks("all"), before);
+    });
+  });
+
+  it("rejeita JSON inválido sem alterar o store", async () => {
+    await withServer(async (base, tasks) => {
+      await postTask(base, { title: "existente" });
+      const before = tasks.listTasks("all");
+
+      const invalid = await request(base, "/tasks", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{",
+      });
+
+      assert.equal(invalid.status, 400);
+      assert.deepEqual(invalid.body, {
+        error: "validation_error",
+        message: "JSON inválido",
+      });
+      assert.deepEqual(tasks.listTasks("all"), before);
+    });
+  });
+
+  it("responde rota ou método desconhecido com route_not_found", async () => {
+    await withServer(async (base) => {
+      const missing = await request(base, "/ausente");
+      const wrongMethod = await request(base, "/tasks", { method: "PUT" });
+
+      assert.equal(missing.status, 404);
+      assert.deepEqual(missing.body, {
+        error: "route_not_found",
+        message: "Rota não encontrada",
+      });
+      assert.equal(wrongMethod.status, 404);
+      assert.equal(errorBody(wrongMethod.body).error, "route_not_found");
+    });
+  });
+});
+
+function errorBody(body: unknown): { error: string; message: string } {
   assert.ok(body !== null && typeof body === "object");
   const record = body as { error?: unknown; message?: unknown };
   assert.equal(typeof record.error, "string");

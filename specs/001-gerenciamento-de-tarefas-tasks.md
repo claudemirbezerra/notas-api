@@ -27,7 +27,7 @@ Quebra de [spec 001](001-gerenciamento-de-tarefas-spec.md) e [plano 001](001-ger
    - `createHttpServer(service)` com `node:http`. `POST /tasks` valida o JSON com o schema de criação e responde `201` com a tarefa. `GET /tasks` aplica `all` quando `status` está ausente; valor presente passa pelo schema de filtro. Erro de validação é `400` com `{ "error": "validation_error", "message" }` e não altera o store. Sucesso de listagem é `200` com `{ "tasks": [...] }`.
    - Pronto: o teste HTTP, com `listen(0)` e `fetch`, passa para criar, título inválido sem criar, listar sem filtro, `all`, `open`, `done` e filtro inválido sem alterar a lista.
 
-5. -[ ] HTTP: concluir, remover e rota desconhecida
+5. -[ x ] HTTP: concluir, remover e rota desconhecida
    - Depende de: 4.
    - Arquivos: `src/http/server.ts`, `src/http/server.test.ts`.
    - `POST /tasks/:id/complete` e `DELETE /tasks/:id`. Id vazio é `400` `validation_error`. `TaskNotFoundError` vira `404` `task_not_found`. `TaskAlreadyDoneError` vira `409` `task_already_done`. Remoção aceita responde `204` sem corpo. JSON inválido em `POST /tasks` responde `400` `validation_error` sem alterar o store. Rota ou método desconhecido responde `404` `route_not_found`. A mutação do service só ocorre depois do parse completo do corpo.
