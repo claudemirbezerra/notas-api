@@ -2,7 +2,7 @@
 
 Quebra de [spec 001](001-gerenciamento-de-tarefas-spec.md) e [plano 001](001-gerenciamento-de-tarefas-plan.md). Cada item cabe em um commit. Em toda tarefa, `npm test` e `npm run typecheck` terminam verdes. Nenhuma regra nova entra sem o teste citado no critério de pronto.
 
-1. -[ ] Domínio da tarefa
+1. -[ x ] Domínio da tarefa
    - Depende de: nenhuma.
    - Arquivos: `src/domain/task.ts`, `src/domain/task.test.ts`.
    - Tipos `Task` e `TaskStatus` (`open` | `done`). Schemas Zod de criação (`title` com trim e mínimo 1, chaves extras descartadas), filtro (`all` | `open` | `done`, string vazia falha) e id (trim, mínimo 1). Classes `TaskNotFoundError` e `TaskAlreadyDoneError`.
