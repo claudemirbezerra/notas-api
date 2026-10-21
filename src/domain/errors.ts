@@ -43,3 +43,25 @@ export class TaskAlreadyDoneError extends AppError {
     this.id = id;
   }
 }
+
+export class InvalidTaskMemoryError extends AppError {
+  readonly code = "invalid_task_memory";
+
+  constructor() {
+    super("tasks.json não contém uma lista de tarefas válida");
+    this.name = "InvalidTaskMemoryError";
+  }
+}
+
+export class TaskMemoryIoError extends AppError {
+  readonly code = "task_memory_io";
+
+  constructor(operation: "read" | "write") {
+    super(
+      operation === "read"
+        ? "Não foi possível ler tasks.json"
+        : "Não foi possível gravar tasks.json",
+    );
+    this.name = "TaskMemoryIoError";
+  }
+}

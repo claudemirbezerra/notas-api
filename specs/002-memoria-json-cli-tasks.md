@@ -8,7 +8,7 @@ Quebra de [spec 002](002-memoria-json-cli-spec.md) e [plano 002](002-memoria-jso
    - `taskMemorySchema`: raiz array de objetos strict com `id`, `title` e `status`. `id` e `title` são strings não vazias e iguais ao próprio `trim`. `status` é `open` ou `done`. Ids repetidos falham. O domínio não faz IO e não executa `parse` fora dos testes do schema.
    - Pronto: o teste de domínio passa para lista válida na ordem do array, array vazio, raiz que não é array, chave extra, título ausente, vazio, só com espaços ou com espaço na ponta, id vazio ou com espaço na ponta, estado fora de `open` e `done`, e ids repetidos.
 
-2. -[ ] Erros da memória
+2. -[ x ] Erros da memória
    - Depende de: nenhuma.
    - Arquivos: `src/domain/errors.ts`, `src/domain/errors.test.ts`.
    - `InvalidTaskMemoryError` com código `invalid_task_memory` e mensagem `tasks.json não contém uma lista de tarefas válida`. `TaskMemoryIoError` com código `task_memory_io` e mensagem `Não foi possível ler tasks.json` ou `Não foi possível gravar tasks.json`. As duas são `AppError`. `toHttpError` não ganha código novo.
