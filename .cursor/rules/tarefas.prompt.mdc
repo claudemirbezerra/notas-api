@@ -1,0 +1,14 @@
+---
+mode: agent
+description: Quebra o plano em tarefas pequenas, ordenadas e testáveis.
+---
+
+Gere o tasks.md da feature indicada ( o texto após o comando é o número ou o caminho).
+
+- Leia spec.md e o plan.md da feature.
+- Lista numerada em cada tarefa:
+  - é peuena o suficiente para um único commit;
+  - tem critério claro de "pronto" (ex: teste x passa);
+  - declara dependências, quando houver;
+  - começa com "-[ ]" para marcarmos o progresso.
+- Ordene por dependência. Não implmente nada.

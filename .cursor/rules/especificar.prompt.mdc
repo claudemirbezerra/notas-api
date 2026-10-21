@@ -1,0 +1,19 @@
+---
+mode: agent
+description: Cria a especificação (o que e por que) de uma feature, sem código.
+---
+
+Escreva uma ESPECIFICAÇÃO para a feature descrita a seguir:
+
+Regras:
+
+- Leia specs/constitution.md e respeite todos os princípios.
+- Não escreva código nem decisões de implementação
+- Crie specs/<NNN>-<slug>spec.md (próximo número livre) com:
+  - Contexto/problema
+  - User Stories ("Com <papel>, quero <Objetivo>, para <benefício>").
+  - Requisitos funcionais numerados (RF-1...).
+  - Critério de aceite em EARS ("quando <evento>, o sistema deve <resposta>") 
+  - Fora de escopo.
+  - Questões em aberto
+- Se algo estiver ambíguo, PERGUNTE antes de finalizar.
