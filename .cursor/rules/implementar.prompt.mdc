@@ -3,13 +3,20 @@ mode: agent
 description: Implemente as tarefas dependentes uma a uma, com testes.
 ---
 
-Implemente as tarefas de tasks.md da feature indicada (texto após o comando)
+Implemente as tarefas da feature indicada (o texto após o comando é o número ou o caminho)
+
+- Resolva a spec antes de escrever:
+  - se o texto for um número (ex.: 001), use o arquivo já criado em specs/<NNN>-<slug>spec.md com esse <NNN>
+  - se o texto for um caminho, use esse arquivo
+  - <NNN> e <slug> saem do nome da spec; não invente outro número nem outro slug
+- Leia specs/<NNN>-<slug>spec.md, specs/<NNN>-<slug>plan.md e specs/<NNN>-<slug>tasks.md dessa feature.
+- Marque o progresso em specs/<NNN>-<slug>tasks.md.
 
 Uma tarefa por vez:
-1. Escolha o próximo "- [ ]" cujas dependências já estão prontas.
-2. Implemente seguindo o plan.md, as instructions e a constitution.
+1. Escolha o próximo "-[ ]" cujas dependências já estão prontas.
+2. Implemente seguindo o specs/<NNN>-<slug>plan.md, as instructions e a constitution.
 3. Escreva/atualize testes e rode npm run test e npm run typecheck.
-4. Só marque "- [ x ]" qquando estiver verde.
+4. Só marque "-[ x ]" qquando estiver verde.
 5. Pare ao concluir uma fatia coesa e peça revisão.
-6. Nunca desative testes/tipos para "passar". 
+6. Nunca desative testes/tipos para "passar".
 7. Se a spec estiver errada, pare e avise.

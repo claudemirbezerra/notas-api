@@ -5,8 +5,12 @@ description: Gera o plano técnico (COMO) a partir de uma spec existente.
 
 Gera o PLANO TÉCNICO da feature indicada (o texto após o comando é o número ou o caminho)
 
-- leia a spec.md da feature e a specs/constitution.md
-- crie plan.md na mesma pasta da spec, contendo:
+- Resolva a spec antes de escrever:
+  - se o texto for um número (ex.: 001), use o arquivo já criado em specs/<NNN>-<slug>spec.md com esse <NNN>
+  - se o texto for um caminho, use esse arquivo
+  - <NNN> e <slug> saem do nome da spec; não invente outro número nem outro slug
+- leia essa spec e a specs/constitution.md
+- crie specs/<NNN>-<slug>plan.md, com o mesmo número e o mesmo slug da spec, contendo:
   - 1. Aruitetura - camadas/aruivos criados ou alterados (http/cli -> service -> store).
   - 2. Modelo de dados - tipos e schemas zod.
   - 3. Contratos - rotas HTTP e/ou comandos de CLI, com entrada/saída.

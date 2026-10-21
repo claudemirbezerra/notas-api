@@ -3,9 +3,14 @@ mode: agent
 description: Quebra o plano em tarefas pequenas, ordenadas e testáveis.
 ---
 
-Gere o tasks.md da feature indicada ( o texto após o comando é o número ou o caminho).
+Gere as tarefas da feature indicada ( o texto após o comando é o número ou o caminho).
 
-- Leia spec.md e o plan.md da feature.
+- Resolva a spec antes de escrever:
+  - se o texto for um número (ex.: 001), use o arquivo já criado em specs/<NNN>-<slug>spec.md com esse <NNN>
+  - se o texto for um caminho, use esse arquivo
+  - <NNN> e <slug> saem do nome da spec; não invente outro número nem outro slug
+- Leia specs/<NNN>-<slug>spec.md e specs/<NNN>-<slug>plan.md dessa feature.
+- Crie specs/<NNN>-<slug>tasks.md, com o mesmo número e o mesmo slug da spec.
 - Lista numerada em cada tarefa:
   - é peuena o suficiente para um único commit;
   - tem critério claro de "pronto" (ex: teste x passa);
