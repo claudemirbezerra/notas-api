@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { describe, it } from "node:test";
 
-import { runCli, type CliIo } from "./cli.js";
+import { runCli, runPersistentCli, type CliIo } from "./cli.js";
 import { TaskService } from "./service/task-service.js";
 import { MemoryTaskStore } from "./store/memory-task-store.js";
 
@@ -22,6 +25,41 @@ function run(argv: string[], tasks = new TaskService(new MemoryTaskStore())) {
   };
   const code = runCli(argv, tasks, io);
   return { code, stdout, stderr, tasks };
+}
+
+type TestContext = {
+  after(fn: () => void): void;
+};
+
+function memoryFile(t: TestContext, contents?: Buffer | string): string {
+  const dir = mkdtempSync(path.join(tmpdir(), "notas-cli-"));
+  t.after(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+  const file = path.join(dir, "tasks.json");
+  if (contents !== undefined) {
+    writeFileSync(file, contents);
+  }
+  return file;
+}
+
+function runPersistent(argv: string[], filePath: string) {
+  let stdout = "";
+  let stderr = "";
+  const io: CliIo = {
+    stdout: {
+      write(chunk) {
+        stdout += chunk;
+      },
+    },
+    stderr: {
+      write(chunk) {
+        stderr += chunk;
+      },
+    },
+  };
+  const code = runPersistentCli(argv, filePath, io);
+  return { code, stdout, stderr };
 }
 
 describe("CLI criar e listar", () => {
@@ -212,5 +250,130 @@ describe("CLI concluir, remover e uso", () => {
     assert.equal(complete.stdout, "");
     assert.equal(remove.stdout, "");
     assert.deepEqual(tasks.listTasks("all"), before);
+  });
+});
+
+describe("CLI memória entre invocações", () => {
+  it("cria e a listagem seguinte devolve o mesmo id, título e open", (t) => {
+    const file = memoryFile(t);
+    const created = runPersistent(["create", "--title", "  comprar leite  "], file);
+
+    assert.equal(created.code, 0);
+    assert.equal(created.stderr, "");
+    assert.deepEqual(JSON.parse(created.stdout), {
+      id: "1",
+      title: "comprar leite",
+      status: "open",
+    });
+
+    const listed = runPersistent(["list"], file);
+    assert.equal(listed.code, 0);
+    assert.deepEqual(JSON.parse(listed.stdout), {
+      tasks: [{ id: "1", title: "comprar leite", status: "open" }],
+    });
+  });
+
+  it("duas criações aparecem na ordem, com ids diferentes", (t) => {
+    const file = memoryFile(t);
+    const older = runPersistent(["create", "--title", "mais antiga"], file);
+    const newer = runPersistent(["create", "--title", "mais nova"], file);
+
+    assert.equal(older.code, 0);
+    assert.equal(newer.code, 0);
+    assert.notEqual(JSON.parse(older.stdout).id, JSON.parse(newer.stdout).id);
+
+    const listed = runPersistent(["list"], file);
+    assert.deepEqual(JSON.parse(listed.stdout), {
+      tasks: [
+        { id: "1", title: "mais antiga", status: "open" },
+        { id: "2", title: "mais nova", status: "open" },
+      ],
+    });
+  });
+
+  it("concluir e remover aparecem na invocação seguinte, sem trocar a posição", (t) => {
+    const file = memoryFile(t);
+    runPersistent(["create", "--title", "mais antiga"], file);
+    runPersistent(["create", "--title", "do meio"], file);
+    runPersistent(["create", "--title", "mais nova"], file);
+
+    const completed = runPersistent(["complete", "--id", "2"], file);
+    assert.equal(completed.code, 0);
+    assert.deepEqual(JSON.parse(completed.stdout), {
+      id: "2",
+      title: "do meio",
+      status: "done",
+    });
+
+    const afterComplete = runPersistent(["list"], file);
+    assert.deepEqual(JSON.parse(afterComplete.stdout), {
+      tasks: [
+        { id: "1", title: "mais antiga", status: "open" },
+        { id: "2", title: "do meio", status: "done" },
+        { id: "3", title: "mais nova", status: "open" },
+      ],
+    });
+
+    const removed = runPersistent(["remove", "--id", "1"], file);
+    assert.equal(removed.code, 0);
+
+    const afterRemove = runPersistent(["list"], file);
+    assert.deepEqual(JSON.parse(afterRemove.stdout), {
+      tasks: [
+        { id: "2", title: "do meio", status: "done" },
+        { id: "3", title: "mais nova", status: "open" },
+      ],
+    });
+  });
+
+  it("listar sem arquivo não cria tasks.json", (t) => {
+    const file = memoryFile(t);
+    const listed = runPersistent(["list"], file);
+
+    assert.equal(listed.code, 0);
+    assert.equal(listed.stderr, "");
+    assert.deepEqual(JSON.parse(listed.stdout), { tasks: [] });
+    assert.equal(existsSync(file), false);
+  });
+
+  it("criar a partir de arquivo ausente ou em branco grava a tarefa", (t) => {
+    const absent = memoryFile(t);
+    const created = runPersistent(["create", "--title", "primeira"], absent);
+    assert.equal(created.code, 0);
+    assert.equal(existsSync(absent), true);
+    assert.deepEqual(JSON.parse(runPersistent(["list"], absent).stdout), {
+      tasks: [{ id: "1", title: "primeira", status: "open" }],
+    });
+
+    const blank = memoryFile(t, " \n\t ");
+    const fromBlank = runPersistent(["create", "--title", "segunda"], blank);
+    assert.equal(fromBlank.code, 0);
+    assert.deepEqual(JSON.parse(runPersistent(["list"], blank).stdout), {
+      tasks: [{ id: "1", title: "segunda", status: "open" }],
+    });
+  });
+
+  it("listar uma lista vazia não muda os bytes", (t) => {
+    const contents = Buffer.from("[]");
+    const file = memoryFile(t, contents);
+    const listed = runPersistent(["list"], file);
+
+    assert.equal(listed.code, 0);
+    assert.deepEqual(JSON.parse(listed.stdout), { tasks: [] });
+    assert.deepEqual(readFileSync(file), contents);
+  });
+
+  it("diretórios diferentes não compartilham tarefas", (t) => {
+    const first = memoryFile(t);
+    const second = memoryFile(t);
+    runPersistent(["create", "--title", "somente a"], first);
+    runPersistent(["create", "--title", "somente b"], second);
+
+    assert.deepEqual(JSON.parse(runPersistent(["list"], first).stdout), {
+      tasks: [{ id: "1", title: "somente a", status: "open" }],
+    });
+    assert.deepEqual(JSON.parse(runPersistent(["list"], second).stdout), {
+      tasks: [{ id: "1", title: "somente b", status: "open" }],
+    });
   });
 });

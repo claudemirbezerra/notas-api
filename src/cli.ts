@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 import { AppError, toErrorBody } from "./domain/errors.js";
 import { createTaskSchema, taskFilterSchema, taskIdSchema } from "./domain/task.js";
 import { TaskService } from "./service/task-service.js";
+import { FileTaskStore } from "./store/file-task-store.js";
 import { MemoryTaskStore } from "./store/memory-task-store.js";
 
 export type CliWriter = {
@@ -26,6 +27,15 @@ class UsageError extends AppError {
     super(message);
     this.name = "UsageError";
   }
+}
+
+export function runPersistentCli(
+  argv: readonly string[],
+  filePath: string,
+  io: CliIo = { stdout: process.stdout, stderr: process.stderr },
+): number {
+  const store = FileTaskStore.open(filePath);
+  return runCli(argv, new TaskService(store), io);
 }
 
 export function runCli(
