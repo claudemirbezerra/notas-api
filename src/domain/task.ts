@@ -17,23 +17,3 @@ export const createTaskSchema = z.object({
 export const taskFilterSchema = z.enum(["all", "open", "done"]);
 
 export const taskIdSchema = z.string().trim().min(1);
-
-export class TaskNotFoundError extends Error {
-  readonly id: string;
-
-  constructor(id: string) {
-    super(`Tarefa não encontrada: ${id}`);
-    this.name = "TaskNotFoundError";
-    this.id = id;
-  }
-}
-
-export class TaskAlreadyDoneError extends Error {
-  readonly id: string;
-
-  constructor(id: string) {
-    super(`Tarefa já concluída: ${id}`);
-    this.name = "TaskAlreadyDoneError";
-    this.id = id;
-  }
-}

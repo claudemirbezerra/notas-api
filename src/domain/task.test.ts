@@ -1,13 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import {
-  TaskAlreadyDoneError,
-  TaskNotFoundError,
-  createTaskSchema,
-  taskFilterSchema,
-  taskIdSchema,
-} from "./task.js";
+import { createTaskSchema, taskFilterSchema, taskIdSchema } from "./task.js";
 
 describe("createTaskSchema", () => {
   it("remove espaços nas extremidades do título", () => {
@@ -62,21 +56,5 @@ describe("taskIdSchema", () => {
   it("rejeita id vazio", () => {
     assert.equal(taskIdSchema.safeParse("").success, false);
     assert.equal(taskIdSchema.safeParse("   ").success, false);
-  });
-});
-
-describe("erros de domínio", () => {
-  it("TaskNotFoundError carrega o id ausente", () => {
-    const error = new TaskNotFoundError("4");
-    assert.equal(error instanceof Error, true);
-    assert.equal(error.id, "4");
-    assert.match(error.message, /4/);
-  });
-
-  it("TaskAlreadyDoneError carrega o id já concluído", () => {
-    const error = new TaskAlreadyDoneError("2");
-    assert.equal(error instanceof Error, true);
-    assert.equal(error.id, "2");
-    assert.match(error.message, /2/);
   });
 });

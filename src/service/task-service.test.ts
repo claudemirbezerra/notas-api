@@ -1,11 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import {
-  TaskAlreadyDoneError,
-  TaskNotFoundError,
-  type Task,
-} from "../domain/task.js";
+import { TaskAlreadyDoneError, TaskNotFoundError } from "../domain/errors.js";
+import type { Task } from "../domain/task.js";
 import { MemoryTaskStore } from "../store/memory-task-store.js";
 import type { TaskStore } from "../store/task-store.js";
 import { TaskService } from "./task-service.js";

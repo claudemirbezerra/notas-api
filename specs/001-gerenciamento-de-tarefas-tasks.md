@@ -21,7 +21,7 @@ Quebra de [spec 001](001-gerenciamento-de-tarefas-spec.md) e [plano 001](001-ger
    - `createTask`, `listTasks`, `completeTask` e `removeTask` sobre `TaskStore`. A filtragem é função pura. O service não importa `src/http` nem `src/cli` e não valida título com Zod.
    - Pronto: o teste do service passa para criar `open` com o id do store, títulos iguais com ids diferentes, listas `all` / `open` / `done` na ordem de criação inclusive vazia, concluir `open` mantendo o título, `TaskAlreadyDoneError` sem alterar o store, `TaskNotFoundError` ao concluir ou remover id ausente, remoção sumindo das três listas, e id removido seguindo ausente. Pelo menos um caso observa as chamadas com um store falso.
 
-4. -[ ] HTTP: criar e listar
+4. -[ x ] HTTP: criar e listar
    - Depende de: 3.
    - Arquivos: `src/http/server.ts`, `src/http/server.test.ts`.
    - `createHttpServer(service)` com `node:http`. `POST /tasks` valida o JSON com o schema de criação e responde `201` com a tarefa. `GET /tasks` aplica `all` quando `status` está ausente; valor presente passa pelo schema de filtro. Erro de validação é `400` com `{ "error": "validation_error", "message" }` e não altera o store. Sucesso de listagem é `200` com `{ "tasks": [...] }`.

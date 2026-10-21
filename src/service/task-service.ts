@@ -1,8 +1,5 @@
-import {
-  TaskAlreadyDoneError,
-  TaskNotFoundError,
-  type Task,
-} from "../domain/task.js";
+import { TaskAlreadyDoneError, TaskNotFoundError } from "../domain/errors.js";
+import type { Task } from "../domain/task.js";
 import type { TaskStore } from "../store/task-store.js";
 
 export type TaskListFilter = "all" | "open" | "done";
