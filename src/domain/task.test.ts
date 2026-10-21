@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { createTaskSchema, taskFilterSchema, taskIdSchema } from "./task.js";
+import { createTaskSchema, taskFilterSchema, taskIdSchema, taskMemorySchema } from "./task.js";
 
 describe("createTaskSchema", () => {
   it("remove espaços nas extremidades do título", () => {
@@ -56,5 +56,70 @@ describe("taskIdSchema", () => {
   it("rejeita id vazio", () => {
     assert.equal(taskIdSchema.safeParse("").success, false);
     assert.equal(taskIdSchema.safeParse("   ").success, false);
+  });
+});
+
+describe("taskMemorySchema", () => {
+  it("aceita a lista na ordem do array, inclusive vazia", () => {
+    const tasks = [
+      { id: "1", title: "mais antiga", status: "open" },
+      { id: "2", title: "mais nova", status: "done" },
+    ];
+
+    assert.deepEqual(taskMemorySchema.parse(tasks), tasks);
+    assert.deepEqual(taskMemorySchema.parse([]), []);
+  });
+
+  it("rejeita raiz que não é array", () => {
+    assert.equal(taskMemorySchema.safeParse({ tasks: [] }).success, false);
+    assert.equal(taskMemorySchema.safeParse(null).success, false);
+    assert.equal(taskMemorySchema.safeParse("[]").success, false);
+  });
+
+  it("rejeita chave extra", () => {
+    const parsed = taskMemorySchema.safeParse([
+      { id: "1", title: "estudar", status: "open", extra: true },
+    ]);
+    assert.equal(parsed.success, false);
+  });
+
+  it("rejeita título ausente, vazio, só com espaços ou com espaço na ponta", () => {
+    assert.equal(taskMemorySchema.safeParse([{ id: "1", status: "open" }]).success, false);
+    assert.equal(
+      taskMemorySchema.safeParse([{ id: "1", title: "", status: "open" }]).success,
+      false,
+    );
+    assert.equal(
+      taskMemorySchema.safeParse([{ id: "1", title: "   ", status: "open" }]).success,
+      false,
+    );
+    assert.equal(
+      taskMemorySchema.safeParse([{ id: "1", title: " comprar leite ", status: "open" }]).success,
+      false,
+    );
+  });
+
+  it("rejeita id vazio ou com espaço na ponta", () => {
+    assert.equal(
+      taskMemorySchema.safeParse([{ id: "", title: "estudar", status: "open" }]).success,
+      false,
+    );
+    assert.equal(
+      taskMemorySchema.safeParse([{ id: " 1 ", title: "estudar", status: "open" }]).success,
+      false,
+    );
+  });
+
+  it("rejeita estado fora de open e done", () => {
+    const parsed = taskMemorySchema.safeParse([{ id: "1", title: "estudar", status: "later" }]);
+    assert.equal(parsed.success, false);
+  });
+
+  it("rejeita ids repetidos", () => {
+    const parsed = taskMemorySchema.safeParse([
+      { id: "1", title: "uma", status: "open" },
+      { id: "1", title: "outra", status: "done" },
+    ]);
+    assert.equal(parsed.success, false);
   });
 });

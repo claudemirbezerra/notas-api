@@ -2,7 +2,7 @@
 
 Quebra de [spec 002](002-memoria-json-cli-spec.md) e [plano 002](002-memoria-json-cli-plan.md). Cada item cabe em um commit. Em toda tarefa, `npm test` e `npm run typecheck` terminam verdes. Nenhuma regra nova entra sem o teste citado no critério de pronto. Teste que cria arquivo usa `mkdtemp` em `os.tmpdir()` e apaga o diretório ao final. Nenhum teste grava `tasks.json` no diretório do repositório.
 
-1. -[ ] Schema da memória
+1. -[ x ] Schema da memória
    - Depende de: nenhuma.
    - Arquivos: `src/domain/task.ts`, `src/domain/task.test.ts`.
    - `taskMemorySchema`: raiz array de objetos strict com `id`, `title` e `status`. `id` e `title` são strings não vazias e iguais ao próprio `trim`. `status` é `open` ou `done`. Ids repetidos falham. O domínio não faz IO e não executa `parse` fora dos testes do schema.
