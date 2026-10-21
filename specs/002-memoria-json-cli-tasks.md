@@ -14,7 +14,7 @@ Quebra de [spec 002](002-memoria-json-cli-spec.md) e [plano 002](002-memoria-jso
    - `InvalidTaskMemoryError` com código `invalid_task_memory` e mensagem `tasks.json não contém uma lista de tarefas válida`. `TaskMemoryIoError` com código `task_memory_io` e mensagem `Não foi possível ler tasks.json` ou `Não foi possível gravar tasks.json`. As duas são `AppError`. `toHttpError` não ganha código novo.
    - Pronto: o teste de erros passa para os dois códigos, as duas mensagens de IO e a mensagem fixa de conteúdo inválido. `toErrorBody` devolve esse código e essa mensagem, sem texto cru de Zod.
 
-3. -[ ] Store de arquivo: abrir
+3. -[ x ] Store de arquivo: abrir
    - Depende de: 1, 2.
    - Arquivos: `src/store/file-task-store.ts`, `src/store/file-task-store.test.ts`.
    - `FileTaskStore.open(filePath)` implementa `TaskStore`. Ausência (`ENOENT`) e conteúdo só com espaços em branco abrem lista vazia, próximo id `"1"`, e não criam o arquivo. `[]` e uma lista válida abrem sem reescrever os bytes. A ordem do array é a ordem da lista. UTF-8 inválido, BOM, JSON ilegível e falha do schema lançam `InvalidTaskMemoryError` com os bytes iguais. Erro de leitura que não seja ausência, coberto por dublê, e caminho que é diretório lançam `TaskMemoryIoError` sem apagar o caminho. O próximo id é o maior inteiro decimal sem zero à esquerda, mais um, no mínimo `"1"`. Id que não casa com esse formato continua ocupado e não é devolvido por `allocateId`. Nesta tarefa, `insert`, `update` e `delete` ainda só mudam a lista em memória e não gravam. A interface `TaskStore` não ganha método. `MemoryTaskStore`, service e HTTP não mudam.
