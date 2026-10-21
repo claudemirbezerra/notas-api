@@ -15,7 +15,7 @@ Quebra de [spec 001](001-gerenciamento-de-tarefas-spec.md) e [plano 001](001-ger
    - Interface `TaskStore` com `allocateId`, `insert`, `list`, `findById`, `update` e `delete`. `MemoryTaskStore` guarda um array na ordem de inserção e um contador que só sobe, começando em `"1"`.
    - Pronto: o teste do store passa para ordem de inserção, id seguinte após remoção sem reutilizar o id removido, `update` na mesma posição, `delete`, `findById` ausente, e dois stores criados em seguida não compartilham tarefas.
 
-3. -[ ] Service de tarefas
+3. -[ x ] Service de tarefas
    - Depende de: 1, 2.
    - Arquivos: `src/service/task-service.ts`, `src/service/task-service.test.ts`.
    - `createTask`, `listTasks`, `completeTask` e `removeTask` sobre `TaskStore`. A filtragem é função pura. O service não importa `src/http` nem `src/cli` e não valida título com Zod.
