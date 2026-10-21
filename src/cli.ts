@@ -5,7 +5,6 @@ import { AppError, toErrorBody } from "./domain/errors.js";
 import { createTaskSchema, taskFilterSchema, taskIdSchema } from "./domain/task.js";
 import { TaskService } from "./service/task-service.js";
 import { FileTaskStore, type TaskFileSystem } from "./store/file-task-store.js";
-import { MemoryTaskStore } from "./store/memory-task-store.js";
 
 export type CliWriter = {
   write(chunk: string): unknown;
@@ -138,6 +137,6 @@ function isCliEntrypoint(): boolean {
 }
 
 if (isCliEntrypoint()) {
-  const code = runCli(process.argv, new TaskService(new MemoryTaskStore()));
+  const code = runPersistentCli(process.argv, path.join(process.cwd(), "tasks.json"));
   process.exit(code);
 }

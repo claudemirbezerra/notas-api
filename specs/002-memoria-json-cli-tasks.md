@@ -38,7 +38,7 @@ Quebra de [spec 002](002-memoria-json-cli-spec.md) e [plano 002](002-memoria-jso
    - A abertura ocorre antes de despachar o comando. Conteúdo inválido termina em exit `1`, stderr com `invalid_task_memory`, stdout vazio, bytes iguais, inclusive se o argv for comando desconhecido. Comando desconhecido ou flag ausente, com arquivo ausente, em branco ou válido, continua exit `2` e `usage_error`, sem criar nem alterar o arquivo. Título inválido, filtro inválido, id inexistente e concluir tarefa já `done` continuam exit `1` com o código da spec 001 e não mudam o arquivo. `runPersistentCli` repassa o adaptador de arquivo do store, com o adaptador Node como padrão, para o teste injetar falha de gravação. Falha de gravação num `create` válido termina em exit `1` com `task_memory_io` e conserva a ausência ou o conteúdo anterior.
    - Pronto: o teste da CLI passa para conteúdo inválido com comando conhecido e com comando desconhecido, uso incorreto sem arquivo, uso incorreto com arquivo válido, rejeições da spec 001 sem mudar bytes, e gravação injetada que falha sem deixar tarefa no arquivo.
 
-7. -[ ] Entrypoint da CLI e gitignore
+7. -[ x ] Entrypoint da CLI e gitignore
    - Depende de: 6.
    - Arquivos: `src/cli.ts`, `.gitignore`.
    - Quando `src/cli.ts` é o entrypoint, o processo chama `runPersistentCli(process.argv, path.join(process.cwd(), "tasks.json"))` e `process.exit` com o código devolvido. Não há caminho configurável. `src/index.ts`, `src/http/**`, `src/service/**` e `MemoryTaskStore` permanecem sem mudança de comportamento. A linha `/tasks.json` entra no `.gitignore` da raiz; se o arquivo não existir, criá-lo só com essa regra.
